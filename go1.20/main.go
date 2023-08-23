@@ -37,6 +37,7 @@ const page = `
 	#msg, #errors {
 		margin: 1em;
 		white-space: pre;
+		font-family: monospace;
 	}
 	#errors {
 		color: #800;
