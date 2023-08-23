@@ -1,1 +1,4 @@
 runtime: go120
+app_engine_apis: true
+
+
