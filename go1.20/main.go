@@ -13,9 +13,7 @@ func main() {
 			http.Error(w, "POST only", 400)
 			return
 		}
-
-		log.Println("Serving request")
-		fmt.Fprintln(w, "Hello memcache")
+		useMemcache(r.Context(), w)
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
