@@ -26,7 +26,7 @@
 //	if err := memcache.Set(c, item1); err != nil {
 //		return err
 //	}
-package memcache // import "google.golang.org/appengine/v2/memcache"
+package memcache // import "google.golang.org/appengine/memcache"
 
 import (
 	"bytes"
@@ -87,7 +87,7 @@ type Item struct {
 	Timestamps ItemTimestamps
 }
 
-// ItemTimestamps are timestamps optionnaly provided by the server.
+// ItemTimestamps are timestamps optionally provided by the server.
 // See Peek and PeekMulti.
 type ItemTimestamps struct {
 	// Expiration is related to Item.Expiration but it is a Time (not a Duration),
@@ -156,11 +156,16 @@ func GetMulti(c context.Context, key []string) (map[string]*Item, error) {
 	return getMulti(c, key, cas, peek)
 }
 
+// Peek gets the item for the given key and additionally populates Item.Timestamps.
+// ErrCacheMiss is returned for a memcache cache miss. The key must be at most 250
+// bytes in length.
 func Peek(c context.Context, key string) (*Item, error) {
 	cas, peek := true, true
 	return get(c, key, cas, peek)
 }
 
+// PeekMulti is a batch version of Peek. It is similar to GetMulti but
+// additionally populates Item.Timestamps.
 func PeekMulti(c context.Context, key []string) (map[string]*Item, error) {
 	cas, peek := true, true
 	return getMulti(c, key, cas, peek)
