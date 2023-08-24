@@ -286,7 +286,6 @@ func TestPeekRequest(t *testing.T) {
 				Timestamps: &pb.ItemTimestamps{
 					ExpirationTimeSec: &t1,
 					LastAccessTimeSec: &t2,
-					DeleteLockTimeSec: nil,
 				},
 			},
 		}
@@ -309,8 +308,5 @@ func TestPeekRequest(t *testing.T) {
 	}
 	if item.Timestamps.LastAccess.Unix() != t2 {
 		t.Errorf("got %d, want %d", item.Timestamps.LastAccess.Unix(), t2)
-	}
-	if item.Timestamps.DeleteLock != nil {
-		t.Errorf("got %v, want nil", item.Timestamps.LastAccess.Unix())
 	}
 }

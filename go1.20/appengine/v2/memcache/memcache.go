@@ -82,15 +82,20 @@ type Item struct {
 	// Zero means that compare-and-swap is not used.
 	casID uint64
 
-	// TODO deleplace@ comment
+	// ItemTimestamps are server values only returned when calling Peek and PeekMulti.
+	// The timestamps are nil when calling Get and GetMulti.
 	Timestamps ItemTimestamps
 }
 
-// TODO deleplace@ comment
+// ItemTimestamps are timestamps optionnaly provided by the server.
+// See Peek and PeekMulti.
 type ItemTimestamps struct {
+	// Expiration is related to Item.Expiration but it is a Time (not a Duration),
+	// provided by the server. It is not meant to be set by the user.
 	Expiration *time.Time
+	// LastAccess is the last time the Item was accessed.
 	LastAccess *time.Time
-	DeleteLock *time.Time
+	// The proto also includes delete_lock_time_sec, which is ignored in the Go lib.
 }
 
 const (
@@ -100,6 +105,13 @@ const (
 
 // protoToItem converts a protocol buffer item to a Go struct.
 func protoToItem(p *pb.MemcacheGetResponse_Item) *Item {
+	if p.IsDeleteLocked != nil && *p.IsDeleteLocked {
+		// "delete lock" for a duration is not a feature available in the Go lib.
+		// Such items may exist in memcache though, e.g. created by the Java lib.
+		// In this case, nil is more appropriate than an item with empty value.
+		// For a single Get, nil will translate to ErrCacheMiss.
+		return nil
+	}
 	return &Item{
 		Key:   string(p.Key),
 		Value: p.Value,
@@ -108,12 +120,11 @@ func protoToItem(p *pb.MemcacheGetResponse_Item) *Item {
 		Timestamps: ItemTimestamps{
 			Expiration: timeSecToTime(p.Timestamps.GetExpirationTimeSec()),
 			LastAccess: timeSecToTime(p.Timestamps.GetLastAccessTimeSec()),
-			DeleteLock: timeSecToTime(p.Timestamps.GetDeleteLockTimeSec()),
 		},
 	}
 }
 
-// TODO deleplace@ comment
+// For convenience, we interpret a 0 unix second timestamp as a nil *Time.
 func timeSecToTime(s int64) *time.Time {
 	if s == 0 {
 		return nil
@@ -151,7 +162,7 @@ func Peek(c context.Context, key string) (*Item, error) {
 }
 
 func PeekMulti(c context.Context, key []string) (map[string]*Item, error) {
-	cas, peek := true, false
+	cas, peek := true, true
 	return getMulti(c, key, cas, peek)
 }
 
@@ -186,7 +197,9 @@ func getMulti(c context.Context, key []string, forCas bool, forPeek bool) (map[s
 	m := make(map[string]*Item, len(res.Item))
 	for _, p := range res.Item {
 		t := protoToItem(p)
-		m[t.Key] = t
+		if t != nil {
+			m[t.Key] = t
+		}
 	}
 	return m, nil
 }
